@@ -2,6 +2,7 @@ name = "EventPass"
 
 [auth]
 enabled = true
+providers = ["email"]
 signup = "open"
 
 [[secret]]
