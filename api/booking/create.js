@@ -22,8 +22,7 @@ export default async function(req,res){
   try{
    const inventory=await db.transaction([
     {sql:"UPDATE ep_events SET sold_count=sold_count+$1 WHERE id=$2",params:[qty,eventId]},
-    {sql:"UPDATE ep_ticket_types SET sold_count=sold_count+$1 WHERE id=$2",params:[qty,typeId]},
-    {sql:"SELECT CASE WHEN EXISTS(SELECT 1 FROM ep_events WHERE id=$1) AND EXISTS(SELECT 1 FROM ep_ticket_types WHERE id=$2) THEN 1 ELSE 1/0 END AS inventory_rows",params:[eventId,typeId]}
+    {sql:"UPDATE ep_ticket_types SET sold_count=sold_count+$1 WHERE id=$2",params:[qty,typeId]}
    ]);
    if(!inventory.results[0].rowCount||!inventory.results[1].rowCount)return res.status(409).json({error:"The event or ticket category is no longer available."});
    eventReserved=true;reserved=true;ticketTypeId=typeId;
