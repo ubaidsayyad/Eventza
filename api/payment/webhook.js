@@ -7,7 +7,8 @@ export default async function(req,res){
  const signature=req.headers["x-razorpay-signature"]||"",eventId=req.headers["x-razorpay-event-id"]||"";
  if(!signature||!req.rawBody)return res.status(400).json({error:"Missing webhook signature or raw payload."});
  try{
-  const secret=await config.get("RAZORPAY_WEBHOOK_SECRET");
+  let secret="";try{secret=await config.get("RAZORPAY_WEBHOOK_SECRET");}catch(_){}
+  if(!secret)return res.status(503).json({error:"Razorpay webhooks are disabled until RAZORPAY_WEBHOOK_SECRET is configured in Hatchable Setup."});
   const verified=await webhooks.verifyHmac({raw:req.rawBody,signature,secret,encoding:"hex"});
   if(!verified)return res.status(400).json({error:"Invalid webhook signature."});
   const payload=req.body||{},eventType=String(payload.event||"unknown"),providerEventId=String(eventId||await (async()=>{const d=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(req.rawBody));return [...new Uint8Array(d)].map(x=>x.toString(16).padStart(2,"0")).join("");})());

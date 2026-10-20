@@ -6,8 +6,9 @@ export default async function(req,res){
  const b=req.body||{}, providerOrderId=String(b.razorpay_order_id||""), paymentId=String(b.razorpay_payment_id||""), signature=String(b.razorpay_signature||"");
  if(!providerOrderId||!paymentId||!signature)return res.status(400).json({error:"Payment verification details are incomplete."});
  try{
-  const keyId=await config.get("RAZORPAY_KEY_ID"),keySecret=await config.get("RAZORPAY_KEY_SECRET");
-  if(!keyId||!String(keyId).startsWith("rzp_test_")||!keySecret)return res.status(503).json({error:"Razorpay test configuration is incomplete."});
+  let keyId="",keySecret="";
+  try{keyId=await config.get("RAZORPAY_KEY_ID");keySecret=await config.get("RAZORPAY_KEY_SECRET");}catch(_){}
+  if(!keyId||!String(keyId).startsWith("rzp_test_")||!keySecret)return res.status(503).json({error:"Razorpay TEST credentials are not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in Hatchable Setup before verifying payments. No ticket was issued."});
   const sigOk=await webhooks.verifyHmac({raw:providerOrderId+"|"+paymentId,signature,secret:keySecret,encoding:"hex"});
   if(!sigOk)return res.status(400).json({error:"Payment signature could not be verified. No ticket was issued."});
   const paymentResponse=await fetch("https://api.razorpay.com/v1/payments/"+encodeURIComponent(paymentId),{headers:{Authorization:"Basic "+btoa(keyId+":"+keySecret)}});
