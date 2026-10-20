@@ -1,0 +1,27 @@
+name = "EventPass"
+
+[auth]
+enabled = true
+signup = "open"
+
+[[secret]]
+name = "RAZORPAY_KEY_ID"
+description = "Razorpay test-mode key ID. Keep live mode disabled until credentials and webhook are configured."
+
+[[secret]]
+name = "RAZORPAY_KEY_SECRET"
+description = "Razorpay test-mode key secret. Stored server-side only."
+
+[[secret]]
+name = "RAZORPAY_WEBHOOK_SECRET"
+description = "Razorpay webhook signing secret configured in the Razorpay dashboard."
+
+[[config]]
+name = "site_name"
+description = "Public site name"
+default = "EventPass"
+
+[[config]]
+name = "site_support_email"
+description = "Support email displayed to ticket buyers"
+default = "support@example.com"
