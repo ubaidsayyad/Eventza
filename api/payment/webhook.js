@@ -1,5 +1,6 @@
 import { db, config, webhooks, email } from "hatchable";
 import { fulfillCapturedPayment } from "lib/fulfill-order.js";
+import { releaseOrderInventory } from "lib/inventory.js";
 export const access="public";
 export const methods=["POST"];
 export default async function(req,res){
@@ -24,8 +25,7 @@ export default async function(req,res){
       const updated=await db.query("UPDATE ep_orders SET order_status='failed',updated_at=now() WHERE id=$1 AND order_status='pending' RETURNING id",[p.rows[0].order_id]);
       if(updated.rows.length){
         await db.query("UPDATE ep_payments SET payment_status='failed',provider_payment_id=COALESCE(provider_payment_id,$1),provider_payload=$2::jsonb,updated_at=now() WHERE id=$3 AND payment_status='pending'",[payment.id||null,JSON.stringify({status:payment.status||"failed",reason:payment.error_description||"Payment failed"}),p.rows[0].id]);
-        const items=await db.query("SELECT ticket_type_id,quantity FROM ep_order_items WHERE order_id=$1",[p.rows[0].order_id]);
-        for(const item of items.rows)await db.query("UPDATE ep_ticket_types SET sold_count=GREATEST(0,sold_count-$1) WHERE id=$2",[item.quantity,item.ticket_type_id]);
+        await releaseOrderInventory(p.rows[0].order_id);
       }
     }
   }else if(eventType==="refund.processed"){
@@ -39,8 +39,7 @@ export default async function(req,res){
         if(changed.rows.length){
           await db.query("UPDATE ep_payments SET payment_status='refunded',updated_at=now() WHERE id=$1",[refundRow.rows[0].payment_id]);
           await db.query("UPDATE ep_tickets SET ticket_status='refunded' WHERE order_id=$1 AND ticket_status IN ('valid','checked_in')",[orderId]);
-          const refundItems=await db.query("SELECT ticket_type_id,quantity FROM ep_order_items WHERE order_id=$1",[orderId]);
-          for(const item of refundItems.rows)await db.query("UPDATE ep_ticket_types SET sold_count=GREATEST(0,sold_count-$1) WHERE id=$2",[item.quantity,item.ticket_type_id]);
+          await releaseOrderInventory(orderId);
           await db.query("INSERT INTO ep_audit_logs(actor_id,action,target_type,target_id,details) VALUES('razorpay','refund_processed','order',$1,$2::jsonb)",[orderId,JSON.stringify({provider_refund_id:refund.id,amount:refundRow.rows[0].amount})]);
           const contact=await db.query("SELECT booking_ref,purchaser_name,purchaser_email FROM ep_orders WHERE id=$1",[orderId]);
           if(contact.rows.length){let sent=false,msgId=null,error=null;try{const m=await email.send({to:contact.rows[0].purchaser_email,subject:"Refund processed — EventPass "+contact.rows[0].booking_ref,text:"Your refund was confirmed by the payment provider. Booking "+contact.rows[0].booking_ref+". Refunded tickets cannot be used for entry.",html:"<p>Your refund was confirmed by the payment provider.</p><p>Booking reference: <strong>"+contact.rows[0].booking_ref+"</strong></p><p>Refunded tickets cannot be used for entry.</p>"});sent=!!m.success;msgId=m.message_id||m.ses_message_id||null;if(!sent)error="Provider did not confirm sending."}catch(e){error=String(e);console.log("refund_email_error",error)}await db.query("INSERT INTO ep_email_deliveries(order_id,recipient_email,email_type,delivery_status,provider_message_id,error_message,attempts,last_attempt_at) VALUES($1,$2,'refund_processed',$3,$4,$5,1,now())",[orderId,contact.rows[0].purchaser_email,sent?"sent":"failed",msgId,error]);}

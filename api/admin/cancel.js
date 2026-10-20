@@ -1,4 +1,5 @@
 import { db, email } from "hatchable";
+import { releaseOrderInventory } from "lib/inventory.js";
 export const access="admin";
 export const methods=["POST"];
 export default async function(req,res){
@@ -10,8 +11,7 @@ export default async function(req,res){
   if(o.rows[0].order_status==="refunded"||o.rows[0].order_status==="cancelled")return res.json({ok:true,status:o.rows[0].order_status});
   const updated=await db.query("UPDATE ep_orders SET order_status='cancelled',updated_at=now() WHERE id=$1 AND order_status IN ('pending','failed') RETURNING id",[o.rows[0].id]);
   if(updated.rows.length){
-   const items=await db.query("SELECT ticket_type_id,quantity FROM ep_order_items WHERE order_id=$1",[o.rows[0].id]);
-   for(const it of items.rows)await db.query("UPDATE ep_ticket_types SET sold_count=GREATEST(0,sold_count-$1) WHERE id=$2",[it.quantity,it.ticket_type_id]);
+   await releaseOrderInventory(o.rows[0].id);
    await db.query("UPDATE ep_payments SET payment_status='cancelled',updated_at=now() WHERE order_id=$1 AND payment_status IN ('pending','failed')",[o.rows[0].id]);
   }
   await db.query("INSERT INTO ep_audit_logs(actor_id,actor_email,action,target_type,target_id,details) VALUES($1,$2,'booking_cancelled','order',$3,$4::jsonb)",[String(req.member.id),req.member.email||"",o.rows[0].id,JSON.stringify({booking_ref:ref,reason:String(b.reason||"Admin cancellation").slice(0,300)})]);

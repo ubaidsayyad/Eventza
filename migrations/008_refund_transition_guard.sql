@@ -1,0 +1,2 @@
+ALTER TABLE ep_orders DROP CONSTRAINT IF EXISTS ep_orders_order_status_check;
+ALTER TABLE ep_orders ADD CONSTRAINT ep_orders_order_status_check CHECK (order_status IN ('pending','paid','failed','cancelled','refunding','refund_completing','refunded','partially_refunded'));

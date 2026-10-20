@@ -1,0 +1,2 @@
+ALTER TABLE ep_events ADD CONSTRAINT ep_events_sold_not_over_capacity CHECK (sold_count <= total_capacity);
+ALTER TABLE ep_ticket_types ADD CONSTRAINT ep_ticket_types_sold_not_over_capacity CHECK (sold_count <= capacity);

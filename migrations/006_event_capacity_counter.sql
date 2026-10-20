@@ -1,0 +1,2 @@
+ALTER TABLE ep_events ADD COLUMN IF NOT EXISTS sold_count INTEGER NOT NULL DEFAULT 0 CHECK (sold_count >= 0);
+CREATE INDEX IF NOT EXISTS ep_events_capacity_idx ON ep_events(id,total_capacity,sold_count);
