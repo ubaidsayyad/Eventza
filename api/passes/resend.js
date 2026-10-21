@@ -18,7 +18,7 @@ export default async function(req,res){
    await db.query("UPDATE ep_tickets SET qr_token_hash=$1 WHERE id=$2",[hash,t.id]);
    const url=base+"/pass.html?token="+encodeURIComponent(token);
    let sent=false,error=null,msgId=null;
-   try{const m=await email.send({to:t.attendee_email||o.purchaser_email,subject:"Your EventPass pass — "+t.event_name,text:"Your EventPass pass: "+url+"\nTicket "+t.ticket_no+" — "+t.event_name,html:"<p>Your EventPass pass is ready.</p><h2>"+escapeHtml(t.event_name)+"</h2><p>"+escapeHtml(t.ticket_name)+" · "+escapeHtml(t.ticket_no)+"</p><p><a href='"+url+"'>Open QR pass / print as PDF</a></p>"});sent=!!m.success;msgId=m.message_id||m.ses_message_id||null;if(!sent)error="Provider did not confirm sending.";}catch(e){error=String(e);}
+   try{const m=await email.send({to:t.attendee_email||o.purchaser_email,subject:"Your Eventza pass — "+t.event_name,text:"Your Eventza pass: "+url+"\nTicket "+t.ticket_no+" — "+t.event_name,html:"<p>Your Eventza pass is ready.</p><h2>"+escapeHtml(t.event_name)+"</h2><p>"+escapeHtml(t.ticket_name)+" · "+escapeHtml(t.ticket_no)+"</p><p><a href='"+url+"'>Open QR pass / print as PDF</a></p>"});sent=!!m.success;msgId=m.message_id||m.ses_message_id||null;if(!sent)error="Provider did not confirm sending.";}catch(e){error=String(e);}
    await db.query("INSERT INTO ep_email_deliveries(order_id,ticket_id,recipient_email,email_type,delivery_status,provider_message_id,error_message,attempts,last_attempt_at) VALUES($1,$2,$3,'ticket_pass_resend',$4,$5,$6,1,now())",[o.id,t.id,t.attendee_email||o.purchaser_email,sent?"sent":"failed",msgId,error]);
    passes.push({...t,pass_url:url,token,email_status:sent?"sent":"failed"});
   }

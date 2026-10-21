@@ -17,7 +17,7 @@ export default async function(req,res){
    return await page.pdf({format:"A4",printBackground:true});
   });
   res.setHeader("Content-Type","application/pdf");
-  res.setHeader("Content-Disposition",'attachment; filename="EventPass-'+String(check.rows[0].ticket_no).replace(/[^A-Za-z0-9-]/g,"")+'.pdf"');
+  res.setHeader("Content-Disposition",'attachment; filename="Eventza-'+String(check.rows[0].ticket_no).replace(/[^A-Za-z0-9-]/g,"")+'.pdf"');
   res.setHeader("Cache-Control","no-store");
   return res.send(pdf);
  }catch(e){console.log("pass_pdf_error",String(e));return res.status(503).json({error:"The PDF could not be generated right now. Open the pass in your browser and choose Print / Save as PDF instead."});}

@@ -1,4 +1,4 @@
-name = "EventPass"
+name = "Eventza"
 
 [auth]
 enabled = true
@@ -20,9 +20,9 @@ description = "Razorpay webhook signing secret configured in the Razorpay dashbo
 [[config]]
 name = "site_name"
 description = "Public site name"
-default = "EventPass"
+default = "Eventza"
 
 [[config]]
 name = "site_support_email"
 description = "Support email displayed to ticket buyers"
-default = "support@example.com"
+default = ""

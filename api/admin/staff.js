@@ -6,7 +6,7 @@ export default async function(req,res){
  try{
   if(req.method==="GET"){
    const r=await db.query("SELECT a.id,a.staff_email,a.staff_id,a.event_id,a.enabled,a.created_at,e.name AS event_name,e.event_date::text FROM ep_staff_assignments a JOIN ep_events e ON e.id=a.event_id ORDER BY e.event_date DESC");
-   return res.json({assignments:r.rows,notice:"Staff must first be added as a project collaborator in Hatchable Settings. This table only grants EventPass event-level permissions."});
+   return res.json({assignments:r.rows,notice:"Staff must first be added as a project collaborator in Hatchable Settings. This table only grants Eventza event-level permissions."});
   }
   if(req.method==="POST"){
    const email=String(b.email||"").trim().toLowerCase(),eventId=String(b.event_id||"");

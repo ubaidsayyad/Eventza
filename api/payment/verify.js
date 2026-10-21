@@ -18,7 +18,7 @@ export default async function(req,res){
   if(!local.rows.length)return res.status(404).json({error:"Checkout order not found."});
   if(Math.round(Number(local.rows[0].amount)*100)!==Number(providerPayment.amount)||providerPayment.currency!=="INR")return res.status(400).json({error:"The payment amount does not match the booking."});
   if(providerPayment.status!=="captured"){
-    return res.status(202).json({ok:false,payment_status:providerPayment.status==="failed"?"failed":"pending",booking_ref:local.rows[0].booking_ref,message:"Payment has not reached captured status yet. EventPass will not issue tickets until capture is verified."});
+    return res.status(202).json({ok:false,payment_status:providerPayment.status==="failed"?"failed":"pending",booking_ref:local.rows[0].booking_ref,message:"Payment has not reached captured status yet. Eventza will not issue tickets until capture is verified."});
   }
   const result=await fulfillCapturedPayment({providerOrderId,paymentId,paymentPayload:{status:providerPayment.status,amount:providerPayment.amount,currency:providerPayment.currency},req});
   return res.json({ok:true,payment_status:"paid",booking_ref:result.booking_ref,tickets_issued:result.tickets||0,already_processed:!!result.already_paid});
