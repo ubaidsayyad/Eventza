@@ -1,11 +1,12 @@
 import { db, config } from "hatchable";
-export const access = "public";
+export const access = "user";
 export const methods = ["POST"];
 function token(){return crypto.randomUUID().replace(/-/g,"")+crypto.randomUUID().replace(/-/g,"");}
 async function hash(s){const data=new TextEncoder().encode(s);const h=await crypto.subtle.digest("SHA-256",data);return [...new Uint8Array(h)].map(x=>x.toString(16).padStart(2,"0")).join("");}
 export default async function(req,res){
- const b=req.body||{}, eventId=String(b.event_id||""), typeId=String(b.ticket_type_id||""), qty=Number(b.quantity), name=String(b.full_name||"").trim(), emailAddr=String(b.email||"").trim().toLowerCase(), phone=String(b.phone||"").trim();
- if(!eventId||!typeId||!Number.isInteger(qty)||qty<1||qty>10||name.length<2||name.length>120||! /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailAddr)||phone.length<7||phone.length>24)return res.status(400).json({error:"Enter your name, valid email, phone, ticket type, and a quantity from 1 to 10."});
+ const b=req.body||{}, eventId=String(b.event_id||""), typeId=String(b.ticket_type_id||""), qty=Number(b.quantity), name=String(b.full_name||"").trim(), submittedEmail=String(b.email||"").trim().toLowerCase(), emailAddr=String(req.user.email||"").trim().toLowerCase(), phone=String(b.phone||"").trim();
+ if(!emailAddr||!submittedEmail||submittedEmail!==emailAddr)return res.status(400).json({error:"Use the email address linked to your signed-in Eventza account."});
+ if(!eventId||!typeId||!Number.isInteger(qty)||qty<1||qty>10||name.length<2||name.length>120||! /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailAddr)||phone.length<7||phone.length>24)return res.status(400).json({error:"Enter your name, valid account email, phone, ticket type, and a quantity from 1 to 10."});
  let reserved=false, eventReserved=false, orderId=null, ticketTypeId=null;
  try{
   const q=await db.query("SELECT e.id AS event_id,e.name AS event_name,e.event_date::text,e.start_time::text,e.end_time::text,e.venue,e.total_capacity,e.sold_count AS event_sold_count,e.is_sample,e.event_status,e.sales_start AS event_sales_start,e.sales_end AS event_sales_end,e.attendee_names_required,e.attendee_emails_allowed,t.id AS ticket_type_id,t.name AS ticket_name,t.price,t.booking_fee,t.capacity,t.sold_count,t.per_order_limit,t.sales_start,t.sales_end FROM ep_events e JOIN ep_ticket_types t ON t.event_id=e.id WHERE e.id=$1 AND t.id=$2 AND e.event_status='published' AND e.event_date>=CURRENT_DATE",[eventId,typeId]);
@@ -33,7 +34,7 @@ export default async function(req,res){
    throw inventoryError;
   }
   const subtotal=Number(t.price)*qty,fees=Number(t.booking_fee)*qty,total=subtotal+fees,reference="EP-"+crypto.randomUUID().slice(0,8).toUpperCase()+"-"+Date.now().toString(36).toUpperCase(),rawAccess=token(),accessHash=await hash(rawAccess);
-  const order=await db.query("INSERT INTO ep_orders(booking_ref,purchaser_name,purchaser_email,purchaser_phone,subtotal,booking_fees,total_amount,access_token_hash,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,now()+interval '15 minutes') RETURNING id,booking_ref,order_status,total_amount,currency,expires_at",[reference,name,emailAddr,phone,subtotal,fees,total,accessHash]);
+  const order=await db.query("INSERT INTO ep_orders(booking_ref,purchaser_name,purchaser_email,purchaser_phone,customer_user_id,subtotal,booking_fees,total_amount,access_token_hash,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,now()+interval '15 minutes') RETURNING id,booking_ref,order_status,total_amount,currency,expires_at",[reference,name,emailAddr,phone,String(req.user.id),subtotal,fees,total,accessHash]);
   orderId=order.rows[0].id;
   const item=await db.query("INSERT INTO ep_order_items(order_id,event_id,ticket_type_id,quantity,unit_price,unit_fee,line_total,attendees) VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb) RETURNING id",[orderId,eventId,typeId,qty,t.price,t.booking_fee,total,JSON.stringify(attendees)]);
   const authHeader="Basic "+btoa(String(keyId)+":"+String(keySecret));
